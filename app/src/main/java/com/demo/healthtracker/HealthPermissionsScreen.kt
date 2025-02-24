@@ -66,18 +66,18 @@ fun HealthPermissionsScreen(
     // Health permissions to request
     val healthPermissions = remember {
         listOf(
+            //Heart Rate
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getWritePermission(HeartRateRecord::class),
-
+            // Steps
             HealthPermission.getReadPermission(StepsRecord::class),
             HealthPermission.getWritePermission(StepsRecord::class),
-
+            // Sleep
             HealthPermission.getReadPermission(SleepSessionRecord::class),
             HealthPermission.getWritePermission(SleepSessionRecord::class),
-
+            // Lean Body Mass
             HealthPermission.getReadPermission(LeanBodyMassRecord::class),
             HealthPermission.getWritePermission(LeanBodyMassRecord::class),
-
             // Oxygen Saturation
             HealthPermission.getReadPermission(OxygenSaturationRecord::class),
             HealthPermission.getWritePermission(OxygenSaturationRecord::class),
@@ -99,15 +99,15 @@ fun HealthPermissionsScreen(
             HealthPermission.getReadPermission(DistanceRecord::class),
             HealthPermission.getWritePermission(DistanceRecord::class),
 
-            // Mindfulness Sessions
-            HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
-            HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
 
           /*
 
             HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
             HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
 
+            // Mindfulness Sessions
+            HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+            HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
 
 
             // Height
