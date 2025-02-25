@@ -24,7 +24,7 @@ class BloodOxygenViewModel @Inject constructor(private val healthManager: Health
         loadBloodOxygenData()
     }
 
-    private fun loadBloodOxygenData() {
+    fun loadBloodOxygenData() {
         viewModelScope.launch {
             val endTime = Instant.now()
             val startTime = endTime.minus(7, ChronoUnit.DAYS)

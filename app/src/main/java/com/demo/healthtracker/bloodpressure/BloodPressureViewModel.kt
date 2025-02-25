@@ -25,7 +25,7 @@ class BloodPressureViewModel @Inject constructor(private val healthManager: Heal
         loadBloodPressureData()
     }
 
-    private fun loadBloodPressureData() {
+    fun loadBloodPressureData() {
         viewModelScope.launch {
             val endTime = Instant.now()
             val startTime = endTime.minus(7, ChronoUnit.DAYS)

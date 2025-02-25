@@ -25,7 +25,7 @@ class BMIViewModel @Inject constructor(private val healthManager: HealthManager)
         loadBmiData()
     }
 
-    private fun loadBmiData() {
+    fun loadBmiData() {
         viewModelScope.launch {
             val endTime = Instant.now()
             val startTime = endTime.minus(7, ChronoUnit.DAYS)

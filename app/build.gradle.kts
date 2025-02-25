@@ -57,6 +57,10 @@ dependencies {
     implementation ("androidx.compose.material:material-icons-extended:1.6.1")
     implementation ("androidx.work:work-runtime-ktx:2.10.0")
     implementation ("androidx.hilt:hilt-work:1.2.0")
+    implementation(libs.bundles.hilt)
+    kapt(libs.hilt.compiler)
+    // Testing dependencies
+
 
     implementation(libs.androidx.connect.client)
     implementation(libs.androidx.core.ktx)
@@ -74,6 +78,17 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.bundles.hilt)
-    kapt(libs.hilt.compiler)
+
+    testImplementation ("junit:junit:4.13.2")
+    testImplementation ("io.mockk:mockk:1.13.8")
+    testImplementation ("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation ("androidx.arch.core:core-testing:2.2.0")
+    testImplementation ("androidx.test:core:1.5.0")
+    testImplementation ("androidx.test.ext:junit:1.1.5")
+    testImplementation ("org.robolectric:robolectric:4.10.3")
+    testImplementation ("com.google.dagger:hilt-android-testing:2.48")
+    kaptTest ("com.google.dagger:hilt-android-compiler:2.48")
+
+
+
 }

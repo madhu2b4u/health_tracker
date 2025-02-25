@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,12 +57,14 @@ fun HealthPermissionsScreen(
 ) {
     val context = LocalContext.current
     var permissionState by remember { mutableStateOf<PermissionState>(PermissionState.Checking) }
+    var denialCount by remember { mutableIntStateOf(0) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     val healthConnectClient = remember { HealthConnectClient.getOrCreate(context) }
 
     // Health permissions to request
     val healthPermissions = remember {
-        listOf(
+        setOf(
             //Heart Rate
             HealthPermission.getReadPermission(HeartRateRecord::class),
             HealthPermission.getWritePermission(HeartRateRecord::class),
@@ -77,73 +80,50 @@ fun HealthPermissionsScreen(
             // Oxygen Saturation
             HealthPermission.getReadPermission(OxygenSaturationRecord::class),
             HealthPermission.getWritePermission(OxygenSaturationRecord::class),
-
             // Blood Pressure
             HealthPermission.getReadPermission(BloodPressureRecord::class),
             HealthPermission.getWritePermission(BloodPressureRecord::class),
-
             // Respiratory Rate
             HealthPermission.getReadPermission(RespiratoryRateRecord::class),
             HealthPermission.getWritePermission(RespiratoryRateRecord::class),
-
             // Exercise Sessions
             HealthPermission.getReadPermission(ExerciseSessionRecord::class),
             HealthPermission.getWritePermission(ExerciseSessionRecord::class),
-
-
             // Distance
             HealthPermission.getReadPermission(DistanceRecord::class),
             HealthPermission.getWritePermission(DistanceRecord::class),
-
-
-            /*
-
-              HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-              HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
-
-              // Mindfulness Sessions
-              HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
-              HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
-
-
-              // Height
-              HealthPermission.getReadPermission(HeightRecord::class),
-              HealthPermission.getWritePermission(HeightRecord::class),
-
-              // Exercise Sessions
-              HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-              HealthPermission.getWritePermission(ExerciseSessionRecord::class),
-
-
-             */
         )
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
-        permissionState = if (granted.containsAll(healthPermissions)) {
-            PermissionState.Granted
+        if (granted.containsAll(healthPermissions)) {
+            permissionState = PermissionState.Granted
+            onPermissionsGranted()
         } else {
-            PermissionState.Denied
+            denialCount++
+            if (denialCount >= 2) {
+                // After multiple denials, show settings dialog
+                showSettingsDialog = true
+            }
+            permissionState = PermissionState.Denied
         }
     }
 
     LaunchedEffect(Unit) {
         try {
+            if (!isHealthConnectAvailable(context)) {
+                permissionState = PermissionState.HealthConnectRequired
+                return@LaunchedEffect
+            }
+
             val hasPermissions = healthConnectClient.permissionController.getGrantedPermissions()
             if (hasPermissions.containsAll(healthPermissions)) {
                 permissionState = PermissionState.Granted
                 onPermissionsGranted()
             } else {
-                try {
-                    healthConnectClient.permissionController.getGrantedPermissions()
-                    permissionLauncher.launch(healthPermissions.toSet())
-                    permissionState = PermissionState.Checking
-                } catch (e: Exception) {
-                    Log.e("HealthConnect", "Health Connect not available", e)
-                    permissionState = PermissionState.HealthConnectRequired
-                }
+                permissionState = PermissionState.Denied
             }
         } catch (e: Exception) {
             Log.e("HealthConnect", "Error checking permissions", e)
@@ -151,76 +131,48 @@ fun HealthPermissionsScreen(
         }
     }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Health Permissions") }) }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            when (permissionState) {
-                PermissionState.Checking -> {
-                    CircularProgressIndicator()
-                }
-
-                PermissionState.HealthConnectRequired -> {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            "Health Connect Required",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Text(
-                            "This app requires Health Connect. Please install it from the Play Store.",
-                            textAlign = TextAlign.Center
-                        )
-                        Button(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    data =
-                                        Uri.parse("market://details?id=com.google.android.apps.healthdata")
-                                }
-                                context.startActivity(intent)
-                            }
-                        ) {
-                            Text("Install Health Connect")
-                        }
+    if (permissionState != PermissionState.Granted) {
+        Scaffold(
+            topBar = { TopAppBar(title = { Text("Health Permissions") }) }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                when (permissionState) {
+                    PermissionState.Checking -> {
+                        CircularProgressIndicator()
                     }
-                }
-
-                PermissionState.Denied -> {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            "Permissions Required",
-                            style = MaterialTheme.typography.titleLarge
+                    PermissionState.HealthConnectRequired -> {
+                        HealthConnectRequiredContent(
+                            onInstallClick = { openHealthConnectPlayStore(context) }
                         )
-                        Text(
-                            "Health data permissions are required for the app to function properly.",
-                            textAlign = TextAlign.Center
-                        )
-                        Button(
-                            onClick = {
-                                permissionLauncher.launch(healthPermissions.toTypedArray().toSet())
-                            }
-                        ) {
-                            Text("Grant Permissions")
-                        }
                     }
-                }
-
-                PermissionState.Granted -> {
-                    Text("All permissions granted!")
+                    PermissionState.Denied -> {
+                        PermissionsDeniedContent(
+                            onRequestAgain = {
+                                // This will open the permission dialog when the button is clicked
+                                permissionLauncher.launch(healthPermissions)
+                            }
+                        )
+                    }
+                    else -> { /* No UI for Granted state as we'll navigate away */ }
                 }
             }
         }
+    }
+
+    if (showSettingsDialog) {
+        PermissionSettingsDialog(
+            onDismiss = { showSettingsDialog = false },
+            onGoToSettings = {
+                openAppSettings(context)
+                showSettingsDialog = false
+            }
+        )
     }
 }
 
@@ -280,7 +232,7 @@ private fun PermissionSettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text("Permissions Required") },
         text = {
-            Text("Health data permissions are required. Please enable them in Settings.")
+            Text("You've denied permissions multiple times. Please enable health permissions manually in Settings.")
         },
         confirmButton = {
             TextButton(onClick = onGoToSettings) {
@@ -295,7 +247,6 @@ private fun PermissionSettingsDialog(
     )
 }
 
-// Utility functions
 private fun isHealthConnectAvailable(context: Context): Boolean {
     return try {
         context.packageManager.getPackageInfo("com.google.android.apps.healthdata", 0)
