@@ -33,10 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.demo.healthtracker.formatDateTime
+import com.demo.healthtracker.formatDuration
+import com.demo.healthtracker.formatTime
+
 
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
@@ -201,32 +201,5 @@ fun HealthMetricCard(
                 )
             }
         }
-    }
-}
-
-// Utility functions
-private fun formatDateTime(instant: Instant): String {
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - hh:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
-}
-
-private fun formatTime(instant: Instant): String {
-    return DateTimeFormatter
-        .ofPattern("hh:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
-}
-
-@RequiresApi(Build.VERSION_CODES.S)
-private fun formatDuration(start: Instant, end: Instant): String {
-    val duration = Duration.between(start, end)
-    val hours = duration.toHours()
-    val minutes = duration.toMinutesPart()
-    return if (hours > 0) {
-        "${hours}h ${minutes}m"
-    } else {
-        "${minutes}m"
     }
 }

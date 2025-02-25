@@ -1,6 +1,5 @@
 package com.demo.healthtracker.steps
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -39,8 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.StepsRecord
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.demo.healthtracker.formatDateTime
-import java.time.Duration
-import java.time.Instant
+import com.demo.healthtracker.formatDuration
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -159,12 +157,4 @@ fun StepsCard(record: StepsRecord) {
             )
         }
     }
-}
-
-@SuppressLint("NewApi")
-fun formatDuration(start: Instant, end: Instant): String {
-    val duration = Duration.between(start, end)
-    val hours = duration.toHours()
-    val minutes = duration.toMinutesPart()
-    return "${hours}h ${minutes}m"
 }
