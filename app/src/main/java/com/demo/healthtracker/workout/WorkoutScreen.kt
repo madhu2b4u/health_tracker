@@ -1,11 +1,8 @@
 package com.demo.healthtracker.workout
 
-
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,26 +11,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,17 +35,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.StepsRecord
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Duration
+import com.demo.healthtracker.formatDateTime
+import com.demo.healthtracker.sleep.TimePickerDialog
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,7 +53,7 @@ fun WorkoutScreen(
     workoutViewModel: WorkoutViewModel = hiltViewModel()
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
-    
+
     val workoutData by workoutViewModel.workoutData.collectAsState()
 
     Column(
@@ -125,17 +117,23 @@ fun WorkoutCard(record: ExerciseSessionRecord, viewModel: WorkoutViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                record.title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Text(
-                    text = record.title.toString(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = viewModel.getDuration(record.startTime, record.endTime),
+                    text = getExerciseTypeName(record.exerciseType),
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Duration: ${viewModel.getDuration(record.startTime, record.endTime)}",
+                style = MaterialTheme.typography.bodyMedium
+            )
             Text(
                 text = "Started: ${formatDateTime(record.startTime)}",
                 style = MaterialTheme.typography.bodyMedium
@@ -145,6 +143,25 @@ fun WorkoutCard(record: ExerciseSessionRecord, viewModel: WorkoutViewModel) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
+    }
+}
+
+fun getExerciseTypeName(type: Int): String {
+    return when (type) {
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> "Running"
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
+        ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "Hiking"
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> "Biking"
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> "Swimming Pool"
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "Swimming Open Water"
+        ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT -> "Workout"
+        ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
+        ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> "Dancing"
+        ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> "Boxing"
+        ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING -> "Weight Lifting"
+        ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> "Calisthenics"
+        ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS -> "Exercise Class"
+        else -> "Unknown Exercise"
     }
 }
 
@@ -158,17 +175,30 @@ fun AddWorkoutDialog(
     var selectedStartTime by remember { mutableStateOf(LocalTime.now()) }
     var selectedEndDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedEndTime by remember { mutableStateOf(LocalTime.now()) }
-    var selectedExerciseType by remember { mutableStateOf(0) }
+    var selectedExerciseType by remember { mutableStateOf(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING) }
     var workoutTitle by remember { mutableStateOf("") }
+    var showExerciseTypeMenu by remember { mutableStateOf(false) }
+
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
+
 
     val exerciseTypes = listOf(
         "Running" to ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
         "Walking" to ExerciseSessionRecord.EXERCISE_TYPE_WALKING,
         "Hiking" to ExerciseSessionRecord.EXERCISE_TYPE_HIKING,
         "Biking" to ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+        "Swimming Pool" to ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL,
+        "Swimming Open Water" to ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER,
+        "Workout" to ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
         "Yoga" to ExerciseSessionRecord.EXERCISE_TYPE_YOGA,
-        "Swimming" to ExerciseSessionRecord.EXERCISE_TYPE_SAILING,
-        "Workout" to ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS
+        "Dancing" to ExerciseSessionRecord.EXERCISE_TYPE_DANCING,
+        "Boxing" to ExerciseSessionRecord.EXERCISE_TYPE_BOXING,
+        "Weight Lifting" to ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING,
+        "Calisthenics" to ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS,
+        "Exercise Class" to ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS
     )
 
     AlertDialog(
@@ -186,33 +216,61 @@ fun AddWorkoutDialog(
                 )
 
                 ExposedDropdownMenuBox(
-                    expanded = false,
-                    onExpandedChange = { },
+                    expanded = showExerciseTypeMenu,
+                    onExpandedChange = { showExerciseTypeMenu = it }
                 ) {
                     OutlinedTextField(
-                        value = exerciseTypes.find { it.second == selectedExerciseType }?.first ?: "",
-                        onValueChange = { },
+                        value = exerciseTypes.find { it.second == selectedExerciseType }?.first
+                            ?: "Select Exercise",
+                        onValueChange = {},
                         readOnly = true,
                         label = { Text("Exercise Type") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = false) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showExerciseTypeMenu) },
                         modifier = Modifier.menuAnchor()
                     )
 
-                    DropdownMenu(
-                        expanded = false,
-                        onDismissRequest = { },
+                    ExposedDropdownMenu(
+                        expanded = showExerciseTypeMenu,
+                        onDismissRequest = { showExerciseTypeMenu = false }
                     ) {
                         exerciseTypes.forEach { (name, type) ->
                             DropdownMenuItem(
                                 text = { Text(name) },
-                                onClick = { selectedExerciseType = type }
+                                onClick = {
+                                    selectedExerciseType = type
+                                    showExerciseTypeMenu = false
+                                }
                             )
                         }
                     }
                 }
 
-                // Date and Time pickers implementation would go here
-                // Similar to what we did in previous implementations
+                Text("Start Time", style = MaterialTheme.typography.labelLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    OutlinedButton(onClick = { showStartDatePicker = true }) {
+                        Text(selectedStartDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")))
+                    }
+                    OutlinedButton(onClick = { showStartTimePicker = true }) {
+                        Text(selectedStartTime.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                    }
+                }
+
+                Text("End Time", style = MaterialTheme.typography.labelLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    OutlinedButton(onClick = { showEndDatePicker = true }) {
+                        Text(selectedEndDate.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")))
+                    }
+                    OutlinedButton(onClick = { showEndTimePicker = true }) {
+                        Text(selectedEndTime.format(DateTimeFormatter.ofPattern("hh:mm a")))
+                    }
+                }
+
             }
         },
         confirmButton = {
@@ -234,11 +292,96 @@ fun AddWorkoutDialog(
             }
         }
     )
-}
 
-private fun formatDateTime(instant: Instant): String {
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - hh:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
+    // Date Pickers
+    if (showStartDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedStartDate
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli()
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            selectedStartDate = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                        }
+                        showStartDatePicker = false
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showStartDatePicker = false }
+                ) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false
+            )
+        }
+    }
+
+    if (showEndDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedEndDate
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli()
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            selectedEndDate = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                        }
+                        showEndDatePicker = false
+                    }
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showEndDatePicker = false }
+                ) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState,
+                showModeToggle = false
+            )
+        }
+    }
+
+    // Time Pickers
+    if (showStartTimePicker) {
+        TimePickerDialog(
+            onDismissRequest = { showStartTimePicker = false },
+            onTimeSelected = { hour, minute ->
+                selectedStartTime = LocalTime.of(hour, minute)
+                showStartTimePicker = false
+            }
+        )
+    }
+
+    if (showEndTimePicker) {
+        TimePickerDialog(
+            onDismissRequest = { showEndTimePicker = false },
+            onTimeSelected = { hour, minute ->
+                selectedEndTime = LocalTime.of(hour, minute)
+                showEndTimePicker = false
+            }
+        )
+    }
 }

@@ -33,16 +33,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.demo.healthtracker.formatDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DistanceScreen() {
-    val  distanceViewModel: DistanceViewModel = hiltViewModel()
+    val distanceViewModel: DistanceViewModel = hiltViewModel()
     var showAddDialog by remember { mutableStateOf(false) }
     var distance by remember { mutableStateOf("") }
-    
+
     val distanceData by distanceViewModel.distanceData.collectAsState()
 
     Column(
@@ -106,9 +105,9 @@ fun DistanceScreen() {
             text = {
                 OutlinedTextField(
                     value = distance,
-                    onValueChange = { 
+                    onValueChange = {
                         if (it.isEmpty() || (it.toDoubleOrNull() != null && it.toDouble() <= 100)) {
-                            distance = it 
+                            distance = it
                         }
                     },
                     label = { Text("Distance (km)") },
@@ -172,11 +171,4 @@ fun DistanceCard(record: DistanceRecord) {
             )
         }
     }
-}
-
-private fun formatDateTime(instant: java.time.Instant): String {
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - hh:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
 }

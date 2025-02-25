@@ -24,11 +24,15 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
 
-class HealthManager(private val context: Context) {
-
-    private val healthConnectClient by lazy { HealthConnectClient.getOrCreate(context) }
+@Singleton
+class HealthManager @Inject constructor(
+    private val context: Context,
+    private val healthConnectClient: HealthConnectClient
+) {
 
     // Heart Rate
     suspend fun readHeartRateData(startTime: Instant, endTime: Instant): List<HeartRateRecord> {
@@ -199,7 +203,7 @@ class HealthManager(private val context: Context) {
             val zoneOffset = ZoneOffset.systemDefault().rules.getOffset(currentTime)
 
             val bloodOxygenRecord = OxygenSaturationRecord(
-                percentage = Percentage(percentage)  ,
+                percentage = Percentage(percentage),
                 time = currentTime,
                 zoneOffset = zoneOffset
             )
@@ -211,7 +215,10 @@ class HealthManager(private val context: Context) {
 
     // Blood pressure
 
-    suspend fun readBloodPressureData(startTime: Instant, endTime: Instant): List<BloodPressureRecord> {
+    suspend fun readBloodPressureData(
+        startTime: Instant,
+        endTime: Instant
+    ): List<BloodPressureRecord> {
         return try {
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest(
@@ -245,7 +252,10 @@ class HealthManager(private val context: Context) {
 
     //Respiratory Rate
 
-    suspend fun readRespiratoryData(startTime: Instant, endTime: Instant): List<RespiratoryRateRecord> {
+    suspend fun readRespiratoryData(
+        startTime: Instant,
+        endTime: Instant
+    ): List<RespiratoryRateRecord> {
         return try {
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest(
@@ -353,7 +363,10 @@ class HealthManager(private val context: Context) {
     }
 
     @SuppressLint("RestrictedApi")
-    suspend fun readMindfulnessData(startTime: Instant, endTime: Instant): List<MindfulnessSessionRecord> {
+    suspend fun readMindfulnessData(
+        startTime: Instant,
+        endTime: Instant
+    ): List<MindfulnessSessionRecord> {
         return try {
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest(
@@ -395,7 +408,6 @@ class HealthManager(private val context: Context) {
             Log.e("HealthManager", "Error writing mindfulness data", e)
         }
     }
-
 
 
 }

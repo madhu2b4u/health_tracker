@@ -1,14 +1,11 @@
 package com.demo.healthtracker.workout
 
 import android.annotation.SuppressLint
-import android.content.Context
 import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.demo.healthtracker.HealthManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,10 +18,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
-class WorkoutViewModel @Inject constructor(@ApplicationContext private val context: Context) : ViewModel() {
-    
-    private val healthManager = HealthManager(context)
-    
+class WorkoutViewModel @Inject constructor(private val healthManager: HealthManager) : ViewModel() {
+
     private val _workoutData = MutableStateFlow<List<ExerciseSessionRecord>>(emptyList())
     val workoutData: StateFlow<List<ExerciseSessionRecord>> = _workoutData.asStateFlow()
 
@@ -40,7 +35,12 @@ class WorkoutViewModel @Inject constructor(@ApplicationContext private val conte
         }
     }
 
-    fun addWorkout(startTime: LocalDateTime, endTime: LocalDateTime, exerciseType: Int, title: String) {
+    fun addWorkout(
+        startTime: LocalDateTime,
+        endTime: LocalDateTime,
+        exerciseType: Int,
+        title: String
+    ) {
         viewModelScope.launch {
             val systemZone = ZoneId.systemDefault()
             healthManager.writeWorkoutData(

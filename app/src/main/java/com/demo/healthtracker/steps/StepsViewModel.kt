@@ -1,12 +1,10 @@
 package com.demo.healthtracker.steps
 
-import android.content.Context
 import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.demo.healthtracker.HealthManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,10 +14,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
-class StepsViewModel @Inject constructor(@ApplicationContext private val context: Context) :
+class StepsViewModel @Inject constructor(private val healthManager: HealthManager) :
     ViewModel() {
-
-    private val healthManager = HealthManager(context)
 
     private val _stepsData = MutableStateFlow<List<StepsRecord>>(emptyList())
     val stepsData: StateFlow<List<StepsRecord>> = _stepsData.asStateFlow()

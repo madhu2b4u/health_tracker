@@ -55,6 +55,8 @@ configurations.all {
 
 dependencies {
     implementation ("androidx.compose.material:material-icons-extended:1.6.1")
+    implementation ("androidx.work:work-runtime-ktx:2.10.0")
+    implementation ("androidx.hilt:hilt-work:1.2.0")
 
     implementation(libs.androidx.connect.client)
     implementation(libs.androidx.core.ktx)

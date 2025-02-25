@@ -1,12 +1,10 @@
 package com.demo.healthtracker.sleep
 
-import android.content.Context
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.demo.healthtracker.HealthManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,10 +15,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
-class SleepViewModel @Inject constructor(@ApplicationContext private val context: Context) :
+class SleepViewModel @Inject constructor(private val healthManager: HealthManager) :
     ViewModel() {
-
-    private val healthManager = HealthManager(context)
 
     private val _sleepData = MutableStateFlow<List<SleepSessionRecord>>(emptyList())
     val sleepData: StateFlow<List<SleepSessionRecord>> = _sleepData.asStateFlow()

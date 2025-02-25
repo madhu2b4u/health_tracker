@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,18 +12,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bloodtype
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.SocialDistance
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,17 +59,26 @@ import com.demo.healthtracker.distance.DistanceScreen
 import com.demo.healthtracker.heartrate.HeartRateScreen
 import com.demo.healthtracker.mindfullness.MindfulnessScreen
 import com.demo.healthtracker.respiratoryrate.RespiratoryScreen
+import com.demo.healthtracker.service.HealthDataMonitor
+import com.demo.healthtracker.service.ui.HealthDataOverview
 import com.demo.healthtracker.sleep.SleepScreen
 import com.demo.healthtracker.steps.StepsScreen
 import com.demo.healthtracker.ui.theme.HealthTrackerTheme
 import com.demo.healthtracker.workout.WorkoutScreen
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var healthDataMonitor: HealthDataMonitor
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            healthDataMonitor.startMonitoring()
+
             HealthTrackerTheme {
                 var isPermissionGranted by remember { mutableStateOf(false) }
                 Surface(
@@ -83,6 +97,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+
+    override fun onDestroy() {
+        super.onDestroy()
+        healthDataMonitor.stopMonitoring()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        healthDataMonitor.startMonitoring()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        healthDataMonitor.stopMonitoring()
     }
 }
 
@@ -159,77 +189,100 @@ fun HealthAppNavigation() {
             composable("mindfullwellness") {
                 MindfulnessScreen()
             }
+            composable("overview") {
+                HealthDataOverview()
+            }
+        }
+    }
+}
+
+data class HealthFeature(
+    val title: String,
+    val icon: ImageVector,
+    val route: String
+)
+
+data class HealthCategory(
+    val category: String,
+    val features: List<HealthFeature>
+)
+
+@Composable
+fun HomeScreen(navController: NavController) {
+    val healthCategories = listOf(
+        HealthCategory(
+            "Overview",
+            listOf(
+                HealthFeature("Health Overview", Icons.Default.Dashboard, "overview")
+            )
+        ),
+        HealthCategory(
+            "Activity",
+            listOf(
+                HealthFeature("Steps Tracking", Icons.AutoMirrored.Filled.DirectionsWalk, "steps"),
+                HealthFeature("Workouts", Icons.Default.FitnessCenter, "workout"),
+                HealthFeature("Distance", Icons.Default.SocialDistance, "distance")
+            )
+        ),
+        HealthCategory(
+            "Vitals",
+            listOf(
+                HealthFeature("Heart Rate", Icons.Default.Favorite, "heartrate"),
+                HealthFeature("Blood Pressure", Icons.Default.MonitorHeart, "bloodpressure"),
+                HealthFeature("Blood Oxygen", Icons.Default.Bloodtype, "bloodoxygen"),
+                HealthFeature("Respiratory Rate", Icons.Default.Air, "respiratory")
+            )
+        ),
+        HealthCategory(
+            "Body Measurements",
+            listOf(
+                HealthFeature("BMI Tracking", Icons.Default.Scale, "bmi")
+            )
+        ),
+        HealthCategory(
+            "Sleep & Wellness",
+            listOf(
+                HealthFeature("Sleep Tracking", Icons.Default.Bedtime, "sleep"),
+                HealthFeature("Mindful Wellness", Icons.Default.SelfImprovement, "mindfullwellness")
+            )
+        )
+    )
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        healthCategories.forEach { category ->
+            item {
+                CategoryHeader(category.category)
+            }
+
+            items(category.features) { feature ->
+                FeatureButton(
+                    icon = feature.icon,
+                    text = feature.title,
+                    onClick = { navController.navigate(feature.route) }
+                )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+            }
         }
     }
 }
 
 @Composable
-fun HomeScreen(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        FeatureButton(
-            icon = Icons.AutoMirrored.Filled.DirectionsWalk,
-            text = "Steps Tracking",
-            onClick = { navController.navigate("steps") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.Bedtime,
-            text = "Sleep Tracking",
-            onClick = { navController.navigate("sleep") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.Favorite,
-            text = "Heart Rate",
-            onClick = { navController.navigate("heartrate") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.Scale,
-            text = "BMI Tracking",
-            onClick = { navController.navigate("bmi") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.Bloodtype,
-            text = "Blood Oxygen",
-            onClick = { navController.navigate("bloodoxygen") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.MonitorHeart,
-            text = "Blood Pressure",
-            onClick = { navController.navigate("bloodpressure") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.MonitorHeart,
-            text = "Respiratory Rate",
-            onClick = { navController.navigate("respiratory") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.FitnessCenter,
-            text = "Workouts",
-            onClick = { navController.navigate("workout") }
-        )
-        FeatureButton(
-            icon = Icons.Default.SocialDistance,
-            text = "Distance",
-            onClick = { navController.navigate("distance") }
-        )
-
-        FeatureButton(
-            icon = Icons.Default.SocialDistance,
-            text = "MindFull Wellness",
-            onClick = { navController.navigate("mindfullwellness") }
-        )
-    }
+private fun CategoryHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
 }
 
 @Composable

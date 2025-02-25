@@ -1,12 +1,10 @@
 package com.demo.healthtracker.bloodoxygen
 
-import android.content.Context
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.demo.healthtracker.HealthManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,10 +14,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
-class BloodOxygenViewModel @Inject constructor(@ApplicationContext private val context: Context) :
+class BloodOxygenViewModel @Inject constructor(private val healthManager: HealthManager) :
     ViewModel() {
-
-    private val healthManager = HealthManager(context)
 
     private val _bloodOxygenData = MutableStateFlow<List<OxygenSaturationRecord>>(emptyList())
     val bloodOxygenData: StateFlow<List<OxygenSaturationRecord>> = _bloodOxygenData.asStateFlow()

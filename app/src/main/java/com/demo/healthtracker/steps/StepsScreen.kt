@@ -38,10 +38,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.StepsRecord
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.demo.healthtracker.formatDateTime
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -162,16 +161,8 @@ fun StepsCard(record: StepsRecord) {
     }
 }
 
-// Utility functions
-private fun formatDateTime(instant: Instant): String {
-    val dateTime = instant.atZone(ZoneId.systemDefault())
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - HH:mm")
-        .format(dateTime)
-}
-
 @SuppressLint("NewApi")
-private fun formatDuration(start: Instant, end: Instant): String {
+fun formatDuration(start: Instant, end: Instant): String {
     val duration = Duration.between(start, end)
     val hours = duration.toHours()
     val minutes = duration.toMinutesPart()

@@ -43,15 +43,11 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
-import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
-import androidx.health.connect.client.records.WeightRecord
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,26 +96,26 @@ fun HealthPermissionsScreen(
             HealthPermission.getWritePermission(DistanceRecord::class),
 
 
-          /*
+            /*
 
-            HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
-            HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
+              HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
+              HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
 
-            // Mindfulness Sessions
-            HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
-            HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
-
-
-            // Height
-            HealthPermission.getReadPermission(HeightRecord::class),
-            HealthPermission.getWritePermission(HeightRecord::class),
-
-            // Exercise Sessions
-            HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-            HealthPermission.getWritePermission(ExerciseSessionRecord::class),
+              // Mindfulness Sessions
+              HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+              HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
 
 
-           */
+              // Height
+              HealthPermission.getReadPermission(HeightRecord::class),
+              HealthPermission.getWritePermission(HeightRecord::class),
+
+              // Exercise Sessions
+              HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+              HealthPermission.getWritePermission(ExerciseSessionRecord::class),
+
+
+             */
         )
     }
 

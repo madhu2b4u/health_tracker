@@ -35,9 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.demo.healthtracker.formatDateTime
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -181,11 +179,4 @@ private fun getBmiCategoryColor(bmi: Double): Color {
         bmi < 30 -> Color(0xFFFFA000)   // Orange for overweight
         else -> Color(0xFFF44336)       // Red for obese
     }
-}
-
-private fun formatDateTime(instant: Instant): String {
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - hh:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
 }

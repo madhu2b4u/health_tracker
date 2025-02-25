@@ -1,6 +1,5 @@
 package com.demo.healthtracker.sleep
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,7 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Duration
+import com.demo.healthtracker.getDurationText
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -394,17 +393,3 @@ fun TimePickerDialog(
     )
 }
 
-@SuppressLint("NewApi")
-private fun getDurationText(startTime: Instant, endTime: Instant): String {
-    val duration = Duration.between(startTime, endTime)
-    val hours = duration.toHours()
-    val minutes = duration.toMinutesPart()
-    return "${hours}h ${minutes}m"
-}
-
-private fun formatDateTime(instant: Instant): String {
-    val dateTime = instant.atZone(ZoneId.systemDefault())
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - HH:mm")
-        .format(dateTime)
-}

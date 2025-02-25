@@ -1,12 +1,10 @@
 package com.demo.healthtracker.heartrate
 
-import android.content.Context
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.demo.healthtracker.HealthManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,10 +14,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
-class HeartRateViewModel @Inject constructor(@ApplicationContext private val context: Context) :
+class HeartRateViewModel @Inject constructor(private val healthManager: HealthManager) :
     ViewModel() {
-
-    private val healthManager = HealthManager(context)
 
     private val _heartRateData = MutableStateFlow<List<HeartRateRecord>>(emptyList())
     val heartRateData: StateFlow<List<HeartRateRecord>> = _heartRateData.asStateFlow()

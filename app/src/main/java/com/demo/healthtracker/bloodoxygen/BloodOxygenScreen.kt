@@ -34,9 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.demo.healthtracker.formatDateTime
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,7 +143,10 @@ fun BloodOxygenCard(record: OxygenSaturationRecord, viewModel: BloodOxygenViewMo
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = String.format("%.1f%%", record.percentage.value), // Access the value property
+                    text = String.format(
+                        "%.1f%%",
+                        record.percentage.value
+                    ), // Access the value property
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -183,11 +184,4 @@ private fun getOxygenCategoryColor(percentage: Double): Color {
         percentage >= 85.0 -> Color(0xFFF57C00) // Dark Orange for moderate
         else -> Color(0xFFF44336)               // Red for severe
     }
-}
-
-private fun formatDateTime(instant: Instant): String {
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - hh:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
 }

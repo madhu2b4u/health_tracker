@@ -40,9 +40,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.demo.healthtracker.formatDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,12 +164,4 @@ fun HeartRateCard(record: HeartRateRecord) {
             )
         }
     }
-}
-
-// Utility function for date formatting
-private fun formatDateTime(instant: Instant): String {
-    val dateTime = instant.atZone(ZoneId.systemDefault())
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - HH:mm")
-        .format(dateTime)
 }

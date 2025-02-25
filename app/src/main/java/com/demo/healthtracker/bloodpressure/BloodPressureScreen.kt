@@ -34,11 +34,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.records.BloodPressureRecord
-import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.demo.healthtracker.formatDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +45,7 @@ fun BloodPressureScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var systolic by remember { mutableStateOf("") }
     var diastolic by remember { mutableStateOf("") }
-    
+
     val bloodPressureData by bloodPressureViewModel.bloodPressureData.collectAsState()
 
     Column(
@@ -93,9 +90,9 @@ fun BloodPressureScreen(
                 ) {
                     OutlinedTextField(
                         value = systolic,
-                        onValueChange = { 
+                        onValueChange = {
                             if (it.isEmpty() || (it.toDoubleOrNull() != null && it.toDouble() <= 300)) {
-                                systolic = it 
+                                systolic = it
                             }
                         },
                         label = { Text("Systolic (mmHg)") },
@@ -105,9 +102,9 @@ fun BloodPressureScreen(
                     )
                     OutlinedTextField(
                         value = diastolic,
-                        onValueChange = { 
+                        onValueChange = {
                             if (it.isEmpty() || (it.toDoubleOrNull() != null && it.toDouble() <= 200)) {
-                                diastolic = it 
+                                diastolic = it
                             }
                         },
                         label = { Text("Diastolic (mmHg)") },
@@ -195,11 +192,4 @@ private fun getBloodPressureCategoryColor(systolic: Double, diastolic: Double): 
         systolic < 140 || diastolic < 90 -> Color(0xFFF57C00) // Dark Orange for Stage 1
         else -> Color(0xFFF44336)                              // Red for Stage 2
     }
-}
-
-private fun formatDateTime(instant: Instant): String {
-    return DateTimeFormatter
-        .ofPattern("MMM dd, yyyy - hh:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(instant)
 }
