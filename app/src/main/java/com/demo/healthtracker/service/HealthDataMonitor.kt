@@ -71,17 +71,17 @@ class HealthDataMonitor @Inject constructor(
 
                     if (!checkPermissions()) {
                         Log.d("HealthMonitor", "Permissions not granted, waiting...")
-                        delay(5000)
+                        delay(35000)
                         continue
                     }
 
                     val endTime = Instant.now()
                     val startTime = endTime.minus(7, ChronoUnit.DAYS)
 
-                    Log.d(
+                   /* Log.d(
                         "HealthMonitor",
                         "Starting health data check at ${formatDateTime(endTime)}"
-                    )
+                    )*/
 
                     // Get data and explicitly sort by time before taking latest
                     val latestSteps = healthManager.readStepsData(startTime, endTime)
@@ -114,7 +114,7 @@ class HealthDataMonitor @Inject constructor(
                         .firstOrNull()
 
                     // Log with timestamps to verify ordering
-                    Log.d(
+                  /*  Log.d(
                         "HealthMonitor", """
                     Latest Health Data:
                     Steps: ${latestSteps?.count ?: "No data"} at ${latestSteps?.startTime}
@@ -125,7 +125,7 @@ class HealthDataMonitor @Inject constructor(
                     Latest Workout: ${latestWorkout?.title ?: "No data"} at ${latestWorkout?.startTime}
                     Latest Sleep: From ${latestSleep?.startTime} to ${latestSleep?.endTime}
                     """.trimIndent()
-                    )
+                    )*/
 
                     val data = HealthData(
                         steps = listOfNotNull(latestSteps),
@@ -139,16 +139,16 @@ class HealthDataMonitor @Inject constructor(
 
                     _healthData.value = data
 
-                    Log.d("HealthMonitor", "Health data check completed")
-                    Log.d("HealthMonitor", "-------------------------------------------")
-                    delay(3000)
+                    //Log.d("HealthMonitor", "Health data check completed")
+                    //Log.d("HealthMonitor", "-------------------------------------------")
+                    delay(33000)
                 } catch (e: Exception) {
                     Log.e("HealthMonitor", "Error monitoring health data", e)
-                    delay(5000)
+                    delay(35000)
                 }
             }
         }
-        Log.i("HealthMonitor", "Health monitoring started")
+       // Log.i("HealthMonitor", "Health monitoring started")
     }
 
     fun stopMonitoring() {

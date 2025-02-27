@@ -61,6 +61,8 @@ import com.demo.healthtracker.mindfullness.MindfulnessScreen
 import com.demo.healthtracker.respiratoryrate.RespiratoryScreen
 import com.demo.healthtracker.service.HealthDataMonitor
 import com.demo.healthtracker.service.ui.HealthDataOverview
+import com.demo.healthtracker.service2.HealthDataMonitorV2
+import com.demo.healthtracker.service2.HealthOverviewScreen2
 import com.demo.healthtracker.sleep.SleepScreen
 import com.demo.healthtracker.steps.StepsScreen
 import com.demo.healthtracker.ui.theme.HealthTrackerTheme
@@ -74,10 +76,14 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var healthDataMonitor: HealthDataMonitor
 
+    @Inject
+    lateinit var healthDataMonitorV2: HealthDataMonitorV2
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             healthDataMonitor.startMonitoring()
+            healthDataMonitorV2.startMonitoring()
 
             HealthTrackerTheme {
                 var isPermissionGranted by remember { mutableStateOf(false) }
@@ -103,16 +109,19 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         healthDataMonitor.stopMonitoring()
+        healthDataMonitorV2.stopMonitoring()
     }
 
     override fun onResume() {
         super.onResume()
         healthDataMonitor.startMonitoring()
+        healthDataMonitorV2.startMonitoring()
     }
 
     override fun onPause() {
         super.onPause()
         healthDataMonitor.stopMonitoring()
+        healthDataMonitorV2.stopMonitoring()
     }
 }
 
@@ -192,6 +201,9 @@ fun HealthAppNavigation() {
             composable("overview") {
                 HealthDataOverview()
             }
+            composable("overview2") {
+                HealthOverviewScreen2()
+            }
         }
     }
 }
@@ -213,7 +225,8 @@ fun HomeScreen(navController: NavController) {
         HealthCategory(
             "Overview",
             listOf(
-                HealthFeature("Health Overview", Icons.Default.Dashboard, "overview")
+                HealthFeature("Health Overview", Icons.Default.Dashboard, "overview"),
+                HealthFeature("Health Overview V2", Icons.Default.Dashboard, "overview2")
             )
         ),
         HealthCategory(
