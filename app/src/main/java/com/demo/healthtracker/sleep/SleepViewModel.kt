@@ -35,7 +35,7 @@ class SleepViewModel @Inject constructor(private val healthManager: HealthManage
         }
     }
 
-    fun addSleepSession(startTime: LocalDateTime, endTime: LocalDateTime) {
+    fun addSleepSession(startTime: LocalDateTime, endTime: LocalDateTime, stage:Int) {
         viewModelScope.launch {
             val currentTime = LocalDateTime.now()
             if (startTime.isBefore(currentTime) && endTime.isBefore(currentTime)) {
@@ -44,7 +44,7 @@ class SleepViewModel @Inject constructor(private val healthManager: HealthManage
                 healthManager.writeSleepData(
                     startTime = startTime.atZone(systemZone).toInstant(),
                     endTime = endTime.atZone(systemZone).toInstant(),
-                    stage = SleepSessionRecord.STAGE_TYPE_SLEEPING
+                    stage =stage
                 )
                 loadSleepData()
             }

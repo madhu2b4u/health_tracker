@@ -39,23 +39,24 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.demo.healthtracker.formatDateTime
 import com.demo.healthtracker.formatDuration
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StepsScreen() {
-
     val viewModel: StepsViewModel = hiltViewModel()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var newSteps by remember { mutableStateOf("") }
 
-    // Collect steps data
-    val stepsData by viewModel.stepsData.collectAsState()
+    // Collect daily steps data
+    val dailyStepsData by viewModel.dailyStepsData.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Steps History") },
+                title = { Text("Daily Steps") },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Add Steps")
@@ -64,7 +65,7 @@ fun StepsScreen() {
             )
         }
     ) { padding ->
-        if (stepsData.isEmpty()) {
+        if (dailyStepsData.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -80,8 +81,8 @@ fun StepsScreen() {
                     .padding(padding),
                 contentPadding = PaddingValues(16.dp)
             ) {
-                items(stepsData) { record ->
-                    StepsCard(record)
+                items(dailyStepsData.entries.toList()) { (date, steps) ->
+                    DailyStepsCard(date, steps)
                 }
             }
         }
@@ -127,7 +128,7 @@ fun StepsScreen() {
 }
 
 @Composable
-fun StepsCard(record: StepsRecord) {
+fun DailyStepsCard(date: LocalDate, steps: Long) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -140,21 +141,22 @@ fun StepsCard(record: StepsRecord) {
                 .fillMaxWidth()
         ) {
             Text(
-                text = "${record.count} steps",
+                text = "$steps steps",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = formatDateTime(record.startTime),
+                text = formatDate(date),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "Duration: ${formatDuration(record.startTime, record.endTime)}",
-                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+}
+
+// Helper function to format date
+fun formatDate(date: LocalDate): String {
+    val formatter = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")
+    return date.format(formatter)
 }

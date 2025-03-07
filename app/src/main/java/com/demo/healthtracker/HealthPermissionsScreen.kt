@@ -44,11 +44,13 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +94,12 @@ fun HealthPermissionsScreen(
             // Distance
             HealthPermission.getReadPermission(DistanceRecord::class),
             HealthPermission.getWritePermission(DistanceRecord::class),
+
+            HealthPermission.getReadPermission(WeightRecord::class),
+            HealthPermission.getWritePermission(WeightRecord::class),
+
+            HealthPermission.getReadPermission(HeightRecord::class),
+            HealthPermission.getWritePermission(HeightRecord::class),
         )
     }
 

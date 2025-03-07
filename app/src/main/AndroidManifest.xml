@@ -29,23 +29,16 @@
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
     <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
 
+    <uses-permission android:name="android.permission.health.READ_HEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_HEIGHT" />
 
-    <!-- <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
-     <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_WEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
 
-     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
-     <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED"/>
-
-
-
-     <uses-permission android:name="android.permission.health.READ_HEIGHT" />
-     <uses-permission android:name="android.permission.health.WRITE_HEIGHT" />
-
-     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
-     <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED"/>
 
 
-    -->
 
 
     <queries>
@@ -80,7 +73,15 @@
                     android:name="android.intent.category.HEALTH_PERMISSIONS"/>
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".workmanager.HealthBackgroundService"
+            android:enabled="true"
+            android:exported="false" />
+
     </application>
+
+
 
     <uses-feature
         android:name="androidx.health.connect"

@@ -8,12 +8,14 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.health.connect.client.units.Length
@@ -21,11 +23,22 @@ import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Percentage
 import androidx.health.connect.client.units.Pressure
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class BmiData(
+    val time: Instant,
+    val height: Double,
+    val weight: Double,
+    val bmi: Double,
+    val bmiCategory: String,
+    val leanBodyMass: Double? = null
+)
+
 
 
 @Singleton
@@ -90,6 +103,28 @@ class HealthManager @Inject constructor(
         }
     }
 
+    suspend fun readTotalStepsForDay(date: LocalDate): Long {
+        try {
+            // Convert LocalDate to start and end Instant (midnight to midnight)
+            val startTime = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endTime = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            // Read all step records for the day
+            val response = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = StepsRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+            )
+
+            // Sum up all step counts
+            return response.records.sumOf { it.count }
+        } catch (e: Exception) {
+            Log.e("HealthManager", "Error reading total steps for day", e)
+            return 0L
+        }
+    }
+
     suspend fun writeStepsData(count: Long) {
         try {
             val stepsRecord = StepsRecord(
@@ -114,6 +149,14 @@ class HealthManager @Inject constructor(
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
             )
+            // Log sleep stages for debugging
+            response.records.forEach { record ->
+                Log.d("HealthManager", "Sleep session from ${record.startTime} to ${record.endTime}")
+                record.stages.forEach { stage ->
+                    Log.d("HealthManager", "  Stage: ${getSleepStageString(stage.stage)} from ${stage.startTime} to ${stage.endTime}")
+                }
+            }
+
             response.records
         } catch (e: Exception) {
             Log.e("HealthManager", "Error reading sleep data", e)
@@ -131,6 +174,8 @@ class HealthManager @Inject constructor(
                 endTime = endTime,
                 stage = stage
             )
+            Log.d("HealthManager", "Writing sleep stage: ${getSleepStageString(stage)} from ${startTime} to ${endTime}")
+
 
             val sleepRecord = SleepSessionRecord(
                 startTime = startTime,
@@ -145,9 +190,20 @@ class HealthManager @Inject constructor(
         }
     }
 
-    //BMI
+    private fun getSleepStageString(stage: Int): String {
+        return when (stage) {
+            SleepSessionRecord.STAGE_TYPE_AWAKE -> "Awake"
+            SleepSessionRecord.STAGE_TYPE_SLEEPING -> "Sleeping"
+            SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> "Out of Bed"
+            SleepSessionRecord.STAGE_TYPE_LIGHT -> "Light Sleep"
+            SleepSessionRecord.STAGE_TYPE_DEEP -> "Deep Sleep"
+            SleepSessionRecord.STAGE_TYPE_REM -> "REM Sleep"
+            else -> "Unknown"
+        }
+    }
 
-    suspend fun readBmiData(startTime: Instant, endTime: Instant): List<LeanBodyMassRecord> {
+
+    suspend fun readRawBmiData(startTime: Instant, endTime: Instant): List<LeanBodyMassRecord> {
         return try {
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest(
@@ -162,20 +218,205 @@ class HealthManager @Inject constructor(
         }
     }
 
-    suspend fun writeBmiData(height: Float, weight: Float) {
+    /**
+     * Read BMI related data from Health Connect
+     */
+    suspend fun readBmiData(startTime: Instant, endTime: Instant): List<BmiData> {
+        try {
+            // Read height records
+            val heightResponse = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = HeightRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+            )
+
+            // Read weight records
+            val weightResponse = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = WeightRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+            )
+
+            // Read lean body mass records
+            val leanBodyMassResponse = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = LeanBodyMassRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+            )
+
+            // Get the latest height record or use default
+            val latestHeight = heightResponse.records.maxByOrNull { it.time }?.height?.inMeters ?: 1.7
+
+            // Process and combine data to create BMI entries
+            val bmiDataList = mutableListOf<BmiData>()
+
+            // Process weight records
+            weightResponse.records.forEach { weightRecord ->
+                val weight = weightRecord.weight.inKilograms
+                val bmi = calculateBmi(weight, latestHeight)
+
+                // Find corresponding lean body mass record if available
+                val leanBodyMassRecord = leanBodyMassResponse.records.find {
+                    it.time.isClose(weightRecord.time)
+                }
+
+                bmiDataList.add(
+                    BmiData(
+                        time = weightRecord.time,
+                        height = latestHeight,
+                        weight = weight,
+                        bmi = bmi,
+                        bmiCategory = getBmiCategory(bmi),
+                        leanBodyMass = leanBodyMassRecord?.mass?.inKilograms
+                    )
+                )
+            }
+
+            // Process lean body mass records that don't have corresponding weight records
+            leanBodyMassResponse.records
+                .filter { lbmRecord ->
+                    bmiDataList.none { it.time.isClose(lbmRecord.time) }
+                }
+                .forEach { lbmRecord ->
+                    // Estimate weight based on lean body mass if we don't have actual weight
+                    val estimatedWeight = lbmRecord.mass.inKilograms * 1.15 // Rough estimate
+                    val bmi = calculateBmi(estimatedWeight, latestHeight)
+
+                    bmiDataList.add(
+                        BmiData(
+                            time = lbmRecord.time,
+                            height = latestHeight,
+                            weight = estimatedWeight,
+                            bmi = bmi,
+                            bmiCategory = getBmiCategory(bmi),
+                            leanBodyMass = lbmRecord.mass.inKilograms
+                        )
+                    )
+                }
+
+            return bmiDataList.sortedByDescending { it.time }
+        } catch (e: Exception) {
+            Log.e("HealthManager", "Error reading BMI data", e)
+            return emptyList()
+        }
+    }
+
+    /**
+     * Write height data to Health Connect
+     */
+    suspend fun writeHeightData(heightInMeters: Float) {
+        try {
+            val currentTime = Instant.now()
+            val zoneOffset = ZoneOffset.systemDefault().rules.getOffset(currentTime)
+
+            val heightRecord = HeightRecord(
+                height = Length.meters(heightInMeters.toDouble()),
+                time = currentTime,
+                zoneOffset = zoneOffset
+            )
+
+            healthConnectClient.insertRecords(listOf(heightRecord))
+        } catch (e: Exception) {
+            Log.e("HealthManager", "Error writing height data", e)
+        }
+    }
+
+    /**
+     * Write weight data to Health Connect
+     */
+    suspend fun writeWeightData(weightInKg: Float) {
+        try {
+            val currentTime = Instant.now()
+            val zoneOffset = ZoneOffset.systemDefault().rules.getOffset(currentTime)
+
+            val weightRecord = WeightRecord(
+                weight = Mass.kilograms(weightInKg.toDouble()),
+                time = currentTime,
+                zoneOffset = zoneOffset
+            )
+
+            healthConnectClient.insertRecords(listOf(weightRecord))
+        } catch (e: Exception) {
+            Log.e("HealthManager", "Error writing weight data", e)
+        }
+    }
+
+    /**
+     * Write lean body mass data to Health Connect
+     */
+    suspend fun writeLeanBodyMassData(leanMassInKg: Float) {
         try {
             val currentTime = Instant.now()
             val zoneOffset = ZoneOffset.systemDefault().rules.getOffset(currentTime)
 
             val leanBodyMassRecord = LeanBodyMassRecord(
-                mass = Mass.kilograms(weight.toDouble()),
+                mass = Mass.kilograms(leanMassInKg.toDouble()),
                 time = currentTime,
                 zoneOffset = zoneOffset
             )
+
             healthConnectClient.insertRecords(listOf(leanBodyMassRecord))
+        } catch (e: Exception) {
+            Log.e("HealthManager", "Error writing lean body mass data", e)
+        }
+    }
+
+    /**
+     * Write complete BMI data including height, weight, and calculated lean body mass
+     */
+    suspend fun writeBmiData(heightInMeters: Float, weightInKg: Float, bodyFatPercentage: Float? = null) {
+        try {
+            writeHeightData(heightInMeters)
+            writeWeightData(weightInKg)
+
+            // If body fat percentage is provided, calculate and write lean body mass
+            if (bodyFatPercentage != null) {
+                val leanBodyMass = weightInKg * (1 - bodyFatPercentage / 100f)
+                writeLeanBodyMassData(leanBodyMass)
+            } else {
+                // Estimate lean body mass using Boer formula if body fat is not provided
+                val gender = "male" // This should be a parameter or stored preference
+                val leanBodyMass = if (gender == "male") {
+                    0.407f * weightInKg + 0.267f * heightInMeters * 100 - 19.2f
+                } else {
+                    0.252f * weightInKg + 0.473f * heightInMeters * 100 - 48.3f
+                }
+                writeLeanBodyMassData(leanBodyMass)
+            }
+
         } catch (e: Exception) {
             Log.e("HealthManager", "Error writing BMI data", e)
         }
+    }
+
+    /**
+     * Calculate BMI from weight and height
+     */
+    private fun calculateBmi(weightInKg: Double, heightInMeters: Double): Double {
+        return weightInKg / (heightInMeters * heightInMeters)
+    }
+
+    /**
+     * Get BMI category based on BMI value
+     */
+    private fun getBmiCategory(bmi: Double): String {
+        return when {
+            bmi < 18.5 -> "Underweight"
+            bmi < 25 -> "Normal"
+            bmi < 30 -> "Overweight"
+            else -> "Obese"
+        }
+    }
+
+    /**
+     * Extension function to check if two time instants are close to each other
+     * (within 1 minute)
+     */
+    private fun Instant.isClose(other: Instant): Boolean {
+        return Math.abs(this.epochSecond - other.epochSecond) < 60
     }
 
     // Blood Oxygen
@@ -322,6 +563,47 @@ class HealthManager @Inject constructor(
         } catch (e: Exception) {
             Log.e("HealthManager", "Error writing workout data", e)
         }
+    }
+
+
+
+    suspend fun readTotalDistanceForDay(date: LocalDate): Double {
+        try {
+            // Convert LocalDate to start and end Instant (midnight to midnight)
+            val startTime = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            val endTime = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+            // Read all distance records for the day
+            val response = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = DistanceRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+            )
+
+            // Sum up all distances, converting to kilometers
+            return response.records
+                .sumOf { it.distance.inKilometers }
+        } catch (e: Exception) {
+            Log.e("HealthManager", "Error reading total distance for day", e)
+            return 0.0
+        }
+    }
+
+    // Helper function to get distance data for a range of days
+    suspend fun readDailyDistanceData(startDate: LocalDate, endDate: LocalDate): Map<LocalDate, Double> {
+        val dailyDistances = mutableMapOf<LocalDate, Double>()
+
+        var currentDate = startDate
+        while (!currentDate.isAfter(endDate)) {
+            val totalDistance = readTotalDistanceForDay(currentDate)
+            if (totalDistance > 0) {
+                dailyDistances[currentDate] = totalDistance
+            }
+            currentDate = currentDate.plusDays(1)
+        }
+
+        return dailyDistances
     }
 
     suspend fun readDistanceData(startTime: Instant, endTime: Instant): List<DistanceRecord> {

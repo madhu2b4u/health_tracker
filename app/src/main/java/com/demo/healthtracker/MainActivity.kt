@@ -63,6 +63,7 @@ import com.demo.healthtracker.service.HealthDataMonitor
 import com.demo.healthtracker.service.ui.HealthDataOverview
 import com.demo.healthtracker.service2.HealthDataMonitorV2
 import com.demo.healthtracker.service2.HealthOverviewScreen2
+import com.demo.healthtracker.service3.HealthDataScreen
 import com.demo.healthtracker.sleep.SleepScreen
 import com.demo.healthtracker.steps.StepsScreen
 import com.demo.healthtracker.ui.theme.HealthTrackerTheme
@@ -73,17 +74,21 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
+   /* @Inject
     lateinit var healthDataMonitor: HealthDataMonitor
 
     @Inject
     lateinit var healthDataMonitorV2: HealthDataMonitorV2
+*/
+
+    @Inject
+    lateinit var healthDataMonitor: HealthDataMonitorV3
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             healthDataMonitor.startMonitoring()
-            healthDataMonitorV2.startMonitoring()
+          //  healthDataMonitorV2.startMonitoring()
 
             HealthTrackerTheme {
                 var isPermissionGranted by remember { mutableStateOf(false) }
@@ -109,19 +114,19 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         healthDataMonitor.stopMonitoring()
-        healthDataMonitorV2.stopMonitoring()
+      //  healthDataMonitorV2.stopMonitoring()
     }
 
     override fun onResume() {
         super.onResume()
         healthDataMonitor.startMonitoring()
-        healthDataMonitorV2.startMonitoring()
+       // healthDataMonitorV2.startMonitoring()
     }
 
     override fun onPause() {
         super.onPause()
         healthDataMonitor.stopMonitoring()
-        healthDataMonitorV2.stopMonitoring()
+      //  healthDataMonitorV2.stopMonitoring()
     }
 }
 
@@ -136,6 +141,7 @@ fun HealthAppNavigation() {
         "steps" -> "Steps Tracking"
         "sleep" -> "Sleep Tracking"
         "heartrate" -> "Heart Rate"
+        "health_data" -> "Health Data (30 Days)" // Add title for new screen
         else -> "Health Tracker"
     }
 
@@ -184,11 +190,9 @@ fun HealthAppNavigation() {
             composable("bloodpressure") {
                 BloodPressureScreen()
             }
-
             composable("respiratory") {
                 RespiratoryScreen()
             }
-
             composable("workout") {
                 WorkoutScreen()
             }
@@ -203,6 +207,12 @@ fun HealthAppNavigation() {
             }
             composable("overview2") {
                 HealthOverviewScreen2()
+            }
+            // Add new health data screen route
+            composable("health_data") {
+               HealthDataScreen(
+                    onBackClick = { navController.navigateUp() }
+                )
             }
         }
     }
@@ -226,7 +236,8 @@ fun HomeScreen(navController: NavController) {
             "Overview",
             listOf(
                 HealthFeature("Health Overview", Icons.Default.Dashboard, "overview"),
-                HealthFeature("Health Overview V2", Icons.Default.Dashboard, "overview2")
+                HealthFeature("Health Overview V2", Icons.Default.Dashboard, "overview2"),
+                HealthFeature("Health Data (30 Days)", Icons.Default.Dashboard, "health_data")
             )
         ),
         HealthCategory(

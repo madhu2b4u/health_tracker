@@ -20,11 +20,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,8 +64,6 @@ fun SleepScreen() {
     val sleepViewModel: SleepViewModel = hiltViewModel()
 
     var showAddDialog by remember { mutableStateOf(false) }
-    var selectedStartTime by remember { mutableStateOf<LocalDateTime?>(null) }
-    var selectedEndTime by remember { mutableStateOf<LocalDateTime?>(null) }
 
     val sleepData by sleepViewModel.sleepData.collectAsState()
 
@@ -102,10 +104,11 @@ fun SleepScreen() {
         if (showAddDialog) {
             AddSleepDialog(
                 onDismiss = { showAddDialog = false },
-                onConfirm = { start, end ->
+                onConfirm = { start, end, stage ->
                     sleepViewModel.addSleepSession(
                         startTime = start,
-                        endTime = end
+                        endTime = end,
+                        stage = stage
                     )
                     showAddDialog = false
                 }
@@ -147,7 +150,39 @@ fun SleepCard(record: SleepSessionRecord) {
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Display sleep stages
+            Text(
+                text = "Sleep Stages:",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Column(
+                modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+            ) {
+                if (record.stages.isEmpty()) {
+                    Text(
+                        text = "No stage data available",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    record.stages.forEach { stage ->
+                        val stageName = getSleepStageString(stage.stage)
+                        val stageDuration = getDurationText(stage.startTime, stage.endTime)
+
+                        Text(
+                            text = "$stageName: $stageDuration",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = "From: ${
                     record.startTime.atZone(ZoneId.systemDefault()).format(dateTimeFormatter)
@@ -164,31 +199,54 @@ fun SleepCard(record: SleepSessionRecord) {
     }
 }
 
+// Add this helper function to your file
+fun getSleepStageString(stage: Int): String {
+    return when (stage) {
+        SleepSessionRecord.STAGE_TYPE_AWAKE -> "Awake"
+        SleepSessionRecord.STAGE_TYPE_SLEEPING -> "Sleeping"
+        SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> "Out of Bed"
+        SleepSessionRecord.STAGE_TYPE_LIGHT -> "Light Sleep"
+        SleepSessionRecord.STAGE_TYPE_DEEP -> "Deep Sleep"
+        SleepSessionRecord.STAGE_TYPE_REM -> "REM Sleep"
+        else -> "Unknown"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSleepDialog(
     onDismiss: () -> Unit,
-    onConfirm: (LocalDateTime, LocalDateTime) -> Unit
+    onConfirm: (LocalDateTime, LocalDateTime, Int) -> Unit
 ) {
     var selectedStartDate by remember {
         mutableStateOf(
             LocalDate.now().minusDays(1)
         )
-    } // Yesterday by default
+    }
     var selectedStartTime by remember { mutableStateOf(LocalTime.of(22, 0)) }
-    var selectedEndDate by remember { mutableStateOf(LocalDate.now()) } // Today by default
+    var selectedEndDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedEndTime by remember { mutableStateOf(LocalTime.of(7, 0)) }
+    var selectedSleepStage by remember { mutableStateOf(SleepSessionRecord.STAGE_TYPE_SLEEPING) }
 
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
+    var showSleepStageDropdown by remember { mutableStateOf(false) }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val dateFormatter =
-        remember { DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.getDefault()) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.getDefault()) }
     val timeFormatter = remember { DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault()) }
+
+    val sleepStages = listOf(
+        "Light Sleep" to SleepSessionRecord.STAGE_TYPE_LIGHT,
+        "Deep Sleep" to SleepSessionRecord.STAGE_TYPE_DEEP,
+        "REM Sleep" to SleepSessionRecord.STAGE_TYPE_REM,
+        "Awake" to SleepSessionRecord.STAGE_TYPE_AWAKE,
+        "Sleeping (Unspecified)" to SleepSessionRecord.STAGE_TYPE_SLEEPING,
+        "Out of Bed" to SleepSessionRecord.STAGE_TYPE_OUT_OF_BED
+    )
 
 
     AlertDialog(
@@ -198,6 +256,41 @@ fun AddSleepDialog(
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+
+                Text("Sleep Stage", style = MaterialTheme.typography.labelLarge)
+                ExposedDropdownMenuBox(
+                    expanded = showSleepStageDropdown,
+                    onExpandedChange = { showSleepStageDropdown = it }
+                ) {
+                    OutlinedTextField(
+                        value = sleepStages.first { it.second == selectedSleepStage }.first,
+                        onValueChange = { },
+                        readOnly = true,
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showSleepStageDropdown)
+                        }
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = showSleepStageDropdown,
+                        onDismissRequest = { showSleepStageDropdown = false }
+                    ) {
+                        sleepStages.forEach { (name, stage) ->
+                            DropdownMenuItem(
+                                text = { Text(name) },
+                                onClick = {
+                                    selectedSleepStage = stage
+                                    showSleepStageDropdown = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+
                 Text("Sleep Start", style = MaterialTheme.typography.labelLarge)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -254,7 +347,7 @@ fun AddSleepDialog(
                         }
 
                         else -> {
-                            onConfirm(startDateTime, endDateTime)
+                            onConfirm(startDateTime, endDateTime, selectedSleepStage)
                             onDismiss()
                         }
                     }

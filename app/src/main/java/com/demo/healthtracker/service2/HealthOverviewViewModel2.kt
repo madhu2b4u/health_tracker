@@ -17,8 +17,12 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+const val TAG = "HealthMonitor"
+
 
 @HiltViewModel
 @RequiresApi(Build.VERSION_CODES.S)
@@ -79,7 +83,9 @@ class HealthOverviewViewModel2 @Inject constructor(
             "No data"
         }
     }
-
+    fun formatDate(date: LocalDate): String {
+        return DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy").format(date)
+    }
     fun formatDateTime(time: Instant?): String {
         return if (time != null) {
             DateTimeFormatter
@@ -102,6 +108,37 @@ class HealthOverviewViewModel2 @Inject constructor(
             "${hours}h ${minutes}m"
         } else {
             "${minutes}m"
+        }
+    }
+
+    fun formatSleepStages(record: SleepSessionRecord?): String {
+        if (record == null || record.stages.isEmpty()) return "No stage data"
+
+        val stageMap = mutableMapOf<Int, Duration>()
+
+        record.stages.forEach { stage ->
+            val duration = Duration.between(stage.startTime, stage.endTime)
+            val currentDuration = stageMap.getOrDefault(stage.stage, Duration.ZERO)
+            stageMap[stage.stage] = currentDuration.plus(duration)
+        }
+
+        return stageMap.entries.joinToString("\n") { (stage, duration) ->
+            val hours = duration.toHours()
+            val minutes = duration.toMinutesPart()
+            val timeStr = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+            "${getSleepStageString(stage)}: $timeStr"
+        }
+    }
+
+    private fun getSleepStageString(stage: Int): String {
+        return when (stage) {
+            SleepSessionRecord.STAGE_TYPE_AWAKE -> "Awake"
+            SleepSessionRecord.STAGE_TYPE_SLEEPING -> "Sleeping"
+            SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> "Out of Bed"
+            SleepSessionRecord.STAGE_TYPE_LIGHT -> "Light Sleep"
+            SleepSessionRecord.STAGE_TYPE_DEEP -> "Deep Sleep"
+            SleepSessionRecord.STAGE_TYPE_REM -> "REM Sleep"
+            else -> "Unknown"
         }
     }
 }

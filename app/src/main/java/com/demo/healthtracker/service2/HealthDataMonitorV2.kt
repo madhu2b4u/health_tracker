@@ -15,6 +15,7 @@ import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.ChangesTokenRequest
+import androidx.health.connect.client.units.Length
 import com.demo.healthtracker.HealthManager
 import com.demo.healthtracker.formatDateTime
 import com.demo.healthtracker.formatDuration
@@ -32,6 +33,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -40,7 +42,6 @@ import javax.inject.Singleton
 
 
 @Singleton
-@RequiresApi(Build.VERSION_CODES.S)
 class HealthDataMonitorV2 @Inject constructor(
     private val healthManager: HealthManager,
     @ApplicationContext private val context: Context
@@ -55,6 +56,7 @@ class HealthDataMonitorV2 @Inject constructor(
 
     private var changesToken: String? = null
 
+    @RequiresApi(Build.VERSION_CODES.S)
     fun startMonitoring() {
         Log.i("HealthMonitor", "Starting health data monitoring...")
         stopMonitoring()
@@ -119,6 +121,7 @@ class HealthDataMonitorV2 @Inject constructor(
     }
 
     // Public method to refresh data with throttling
+    @RequiresApi(Build.VERSION_CODES.S)
     fun refreshData() {
         val currentTime = System.currentTimeMillis()
         // Only refresh if at least 3 seconds have passed since last refresh
@@ -130,6 +133,7 @@ class HealthDataMonitorV2 @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun refreshHealthData() {
         scope.launch {
             try {
@@ -138,9 +142,48 @@ class HealthDataMonitorV2 @Inject constructor(
                 val startTime = endTime.minus(7, ChronoUnit.DAYS)
                 Log.d("HealthMonitor", "Fetching data from ${formatDateTime(startTime)} to ${formatDateTime(endTime)}")
 
-                val latestSteps =
-                    healthManager.readStepsData(startTime, endTime).maxByOrNull { it.startTime }
-                Log.d("HealthMonitor", "Steps data: ${latestSteps?.count ?: "No data"}")
+                // Instead of just getting the latest steps record, get daily totals
+                val dailyStepsMap = mutableMapOf<LocalDate, Long>()
+                val currentDate = LocalDate.now()
+                val startDate = currentDate.minusDays(7)
+
+                // Calculate daily totals for each day in the range
+                var iterDate = startDate
+                while (!iterDate.isAfter(currentDate)) {
+                    val dayStart = iterDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                    val dayEnd = iterDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+                    // Get all steps records for this day and sum them
+                    val daySteps = healthManager.readStepsData(dayStart, dayEnd)
+                        .sumOf { it.count }
+
+                    if (daySteps > 0) {
+                        dailyStepsMap[iterDate] = daySteps
+                    }
+
+                    iterDate = iterDate.plusDays(1)
+                }
+
+                // Log the daily totals
+                dailyStepsMap.forEach { (date, steps) ->
+                    Log.d("HealthMonitor", "Steps for ${date}: $steps steps")
+                }
+
+                val latestDayWithSteps = dailyStepsMap.entries
+                    .maxByOrNull { it.key }
+                    ?.let { (date, count) ->
+                        val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                        val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+                        StepsRecord(
+                            count = count,
+                            startTime = dayStart,
+                            endTime = dayEnd,
+                            startZoneOffset = ZoneId.systemDefault().rules.getOffset(dayStart),
+                            endZoneOffset = ZoneId.systemDefault().rules.getOffset(dayEnd)
+                        )
+                    }
+
+                Log.d("HealthMonitor", "Latest day's steps: ${latestDayWithSteps?.count ?: "No data"}")
 
                 val latestHeartRate =
                     healthManager.readHeartRateData(startTime, endTime).maxByOrNull { it.startTime }
@@ -166,16 +209,48 @@ class HealthDataMonitorV2 @Inject constructor(
                     healthManager.readSleepData(startTime, endTime).maxByOrNull { it.startTime }
                 Log.d("HealthMonitor", "Sleep data: Duration ${if (latestSleep != null) formatDuration(latestSleep.startTime, latestSleep.endTime) else "No data"}")
 
-                val latestBmi =
-                    healthManager.readBmiData(startTime, endTime).maxByOrNull { it.time }
+                val latestBmi = healthManager.readRawBmiData(startTime, endTime).maxByOrNull { it.time }
                 Log.d("HealthMonitor", "BMI data: ${latestBmi?.mass?.inKilograms ?: "No data"} kg")
 
-                val latestDistance =
-                    healthManager.readDistanceData(startTime, endTime).maxByOrNull { it.startTime }
-                Log.d("HealthMonitor", "Distance data: ${latestDistance?.distance?.inKilometers ?: "No data"} km")
+                val dailyDistanceMap = mutableMapOf<LocalDate, Double>()
+                // Calculate daily totals for distance
+                iterDate = startDate
+                while (!iterDate.isAfter(currentDate)) {
+                    val dayStart = iterDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                    val dayEnd = iterDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+
+                    // Get all distance records for this day and sum them
+                    val dayDistance = healthManager.readDistanceData(dayStart, dayEnd)
+                        .sumOf { it.distance.inKilometers }
+
+                    if (dayDistance > 0) {
+                        dailyDistanceMap[iterDate] = dayDistance
+                    }
+
+                    iterDate = iterDate.plusDays(1)
+                }
+
+                dailyDistanceMap.forEach { (date, distance) ->
+                    Log.d("HealthMonitor", "Distance for ${date}: $distance km")
+                }
+
+                val latestDayWithDistance = dailyDistanceMap.entries
+                    .maxByOrNull { it.key }
+                    ?.let { (date, totalDistance) ->
+                        val dayStart = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                        val dayEnd = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+                        DistanceRecord(
+                            distance = Length.kilometers(totalDistance),
+                            startTime = dayStart,
+                            endTime = dayEnd,
+                            startZoneOffset = ZoneId.systemDefault().rules.getOffset(dayStart),
+                            endZoneOffset = ZoneId.systemDefault().rules.getOffset(dayEnd),
+                        )
+                    }
+
 
                 val newData = HealthDataV2(
-                    steps = listOfNotNull(latestSteps),
+                    steps = listOfNotNull(latestDayWithSteps),
                     heartRate = listOfNotNull(latestHeartRate),
                     bloodPressure = listOfNotNull(latestBloodPressure),
                     bloodOxygen = listOfNotNull(latestBloodOxygen),
@@ -183,7 +258,7 @@ class HealthDataMonitorV2 @Inject constructor(
                     workout = listOfNotNull(latestWorkout),
                     sleep = listOfNotNull(latestSleep),
                     bmi = listOfNotNull(latestBmi),
-                    distance = listOfNotNull(latestDistance)
+                    distance = listOfNotNull(latestDayWithDistance)
                 )
 
                 // Only update if data has actually changed

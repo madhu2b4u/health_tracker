@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bloodtype
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -47,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -57,6 +60,7 @@ import com.demo.healthtracker.formatDuration
 import com.demo.healthtracker.formatTime
 import kotlinx.coroutines.delay
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -78,6 +82,10 @@ fun HealthOverviewScreen2(
             delay(60000) // Check every minute as a fallback
             viewModel.refreshData()
         }
+    }
+
+    fun formatDate(date: LocalDate): String {
+        return DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy").format(date)
     }
 
     if (healthData == null) {
@@ -147,6 +155,7 @@ fun HealthOverviewScreen2(
                 CategoryHeader("Activity")
             }
 
+
             // Steps
             healthData?.steps?.firstOrNull()?.let { steps ->
                 item {
@@ -154,8 +163,8 @@ fun HealthOverviewScreen2(
                         icon = Icons.Default.DirectionsWalk,
                         title = "Steps",
                         value = viewModel.formatSteps(steps),
-                        time = viewModel.formatDateTime(steps.startTime)
-                    )
+                        time = viewModel.formatDate(steps.startTime.atZone(ZoneId.systemDefault()).toLocalDate()),
+                        )
                 }
             }
 
@@ -164,9 +173,9 @@ fun HealthOverviewScreen2(
                 item {
                     HealthMetricCard(
                         icon = Icons.Default.SocialDistance,
-                        title = "Distance",
+                        title = "Daily Distance",
                         value = String.format("%.2f km", distance.distance.inKilometers),
-                        time = viewModel.formatDateTime(distance.startTime)
+                        time = viewModel.formatDate(distance.startTime.atZone(ZoneId.systemDefault()).toLocalDate()),
                     )
                 }
             }
@@ -269,7 +278,8 @@ fun HealthOverviewScreen2(
                         title = "Sleep",
                         value = viewModel.getDuration(sleep.startTime, sleep.endTime),
                         time = viewModel.formatDateTime(sleep.startTime),
-                        subtitle = "From: ${viewModel.formatDateTime(sleep.startTime)} To: ${viewModel.formatDateTime(sleep.endTime)}"
+                        subtitle = viewModel.formatSleepStages(sleep),
+                        expandable = true // Make this card expandable due to potentially long content
                     )
                 }
             }
@@ -303,8 +313,12 @@ fun HealthMetricCard(
     value: String,
     time: String,
     subtitle: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    expandable: Boolean = false,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -349,6 +363,25 @@ fun HealthMetricCard(
                     Text(
                         text = "Last updated: $time",
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (expandable && !subtitle.isNullOrEmpty()) {
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (expanded) "Show less" else "Show more"
+                    )
+                }
+            }
+            if (subtitle != null) {
+                if (!expandable || expanded) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
